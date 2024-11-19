@@ -26,7 +26,7 @@ const (
 	flgReuseKey               = "reuse-key"
 	flgRenewHook              = "renew-hook"
 	flgNoRandomSleep          = "no-random-sleep"
-	flgOverwriteDomains    	  = "overwrite-domains"
+	flgOverwriteDomains       = "overwrite-domains"
 )
 
 const (
@@ -53,6 +53,9 @@ func createRenew() *cli.Command {
 			}
 			if !hasDomains && !hasCsr {
 				log.Fatal("Please specify --%s/-d (or --%s/-c if you already have a CSR)", flgDomains, flgCSR)
+			}
+			if ctx.Bool(flgOverwriteDomains) && hasCsr {
+				log.Fatal("--%s only works with --%s/-d, --%s/-c doesn't support this option.", flgOverwriteDomains, flgDomains, flgCSR)
 			}
 			return nil
 		},
@@ -112,7 +115,7 @@ func createRenew() *cli.Command {
 					" We do not recommend using this flag if you are doing your renewals in an automated way.",
 			},
 			&cli.BoolFlag{
-				Name: flgOverwriteDomains,
+				Name:  flgOverwriteDomains,
 				Usage: "Check and enforce that the cert's domain list matches those passed in the domains argument.",
 			},
 		},
@@ -177,8 +180,9 @@ func renewForDomains(ctx *cli.Context, client *lego.Client, certsStorage *Certif
 		}
 	}
 
-	certDomains := certcrypto.ExtractDomains(cert)
 	overwriteDomains := ctx.Bool(flgOverwriteDomains)
+
+	certDomains := certcrypto.ExtractDomains(cert)
 
 	if ariRenewalTime == nil && !needRenewal(cert, domain, ctx.Int(flgDays)) &&
 		(!overwriteDomains || slices.Equal(certDomains, domains)) {
