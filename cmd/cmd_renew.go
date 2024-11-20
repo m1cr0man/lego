@@ -26,7 +26,7 @@ const (
 	flgReuseKey               = "reuse-key"
 	flgRenewHook              = "renew-hook"
 	flgNoRandomSleep          = "no-random-sleep"
-	flgOverwriteDomains       = "overwrite-domains"
+	flgReplaceCertDomains     = "replace-cert-domains"
 )
 
 const (
@@ -54,8 +54,8 @@ func createRenew() *cli.Command {
 			if !hasDomains && !hasCsr {
 				log.Fatal("Please specify --%s/-d (or --%s/-c if you already have a CSR)", flgDomains, flgCSR)
 			}
-			if ctx.Bool(flgOverwriteDomains) && hasCsr {
-				log.Fatal("--%s only works with --%s/-d, --%s/-c doesn't support this option.", flgOverwriteDomains, flgDomains, flgCSR)
+			if ctx.Bool(flgReplaceCertDomains) && hasCsr {
+				log.Fatal("--%s only works with --%s/-d, --%s/-c doesn't support this option.", flgReplaceCertDomains, flgDomains, flgCSR)
 			}
 			return nil
 		},
@@ -115,8 +115,8 @@ func createRenew() *cli.Command {
 					" We do not recommend using this flag if you are doing your renewals in an automated way.",
 			},
 			&cli.BoolFlag{
-				Name:  flgOverwriteDomains,
-				Usage: "Check and enforce that the cert's domain list matches those passed in the domains argument.",
+				Name:  flgReplaceCertDomains,
+				Usage: "Check and ensure that the cert's domain list matches those passed in the domains argument.",
 			},
 		},
 	}
@@ -180,12 +180,12 @@ func renewForDomains(ctx *cli.Context, client *lego.Client, certsStorage *Certif
 		}
 	}
 
-	overwriteDomains := ctx.Bool(flgOverwriteDomains)
+	replaceDomains := ctx.Bool(flgReplaceCertDomains)
 
 	certDomains := certcrypto.ExtractDomains(cert)
 
 	if ariRenewalTime == nil && !needRenewal(cert, domain, ctx.Int(flgDays)) &&
-		(!overwriteDomains || slices.Equal(certDomains, domains)) {
+		(!replaceDomains || slices.Equal(certDomains, domains)) {
 		return nil
 	}
 
@@ -219,7 +219,7 @@ func renewForDomains(ctx *cli.Context, client *lego.Client, certsStorage *Certif
 	}
 
 	renewalDomains := domains
-	if !overwriteDomains {
+	if !replaceDomains {
 		renewalDomains = merge(certDomains, domains)
 	}
 
